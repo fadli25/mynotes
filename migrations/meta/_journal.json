@@ -8,6 +8,13 @@
       "when": 1751482676378,
       "tag": "0000_damp_slipstream",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1751485247380,
+      "tag": "0001_strange_forge",
+      "breakpoints": true
     }
   ]
 }

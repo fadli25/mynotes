@@ -1,24 +1,46 @@
 import { withAuth } from "next-auth/middleware";
+import { NextResponse } from "next/server";
 
 export default withAuth(
   function middleware(req) {
-    // Add any additional middleware logic here
+    const { pathname } = req.nextUrl;
+    const token = req.nextauth.token;
+
+    // If user is authenticated and tries to access auth pages, redirect to dashboard
+    if (token && (pathname === "/signin" || pathname === "/signup")) {
+      return NextResponse.redirect(new URL("/dashboard", req.url));
+    }
+
+    // If user is not authenticated and tries to access protected pages, redirect to signin
+    if (!token && pathname.startsWith("/dashboard")) {
+      return NextResponse.redirect(new URL("/signin", req.url));
+    }
+
+    // Allow all other requests to proceed
+    return NextResponse.next();
   },
   {
     callbacks: {
       authorized: ({ token, req }) => {
-        // Allow access to public routes
+        const { pathname } = req.nextUrl;
+
+        // Always allow access to auth pages and API routes
         if (
-          req.nextUrl.pathname.startsWith("/api/auth") ||
-          req.nextUrl.pathname === "/signin" ||
-          req.nextUrl.pathname === "/signup" ||
-          req.nextUrl.pathname === "/"
+          pathname === "/signin" ||
+          pathname === "/signup" ||
+          pathname.startsWith("/api/auth") ||
+          pathname.startsWith("/api/auth/signup")
         ) {
           return true;
         }
 
-        // Require authentication for all other routes
-        return !!token;
+        // For dashboard and other protected routes, require authentication
+        if (pathname.startsWith("/dashboard")) {
+          return !!token;
+        }
+
+        // Allow access to public pages
+        return true;
       },
     },
   }
@@ -26,13 +48,11 @@ export default withAuth(
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder
-     */
-    "/((?!_next/static|_next/image|favicon.ico|public).*)",
+    // Match all paths except static files and API routes (except auth)
+    "/((?!_next/static|_next/image|favicon.ico|api/(?!auth)).*)",
+    // Always run middleware on these specific paths
+    "/dashboard/:path*",
+    "/signin",
+    "/signup",
   ],
 };
